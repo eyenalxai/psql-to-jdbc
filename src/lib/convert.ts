@@ -8,6 +8,7 @@ export const convertToJdbcUrl = (url: string): Result<string, string> => {
 		}
 
 		let parsedUrl: URL
+		
 		try {
 			parsedUrl = new URL(url)
 		} catch (error) {
