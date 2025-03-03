@@ -74,7 +74,7 @@ describe("convertToJdbcUrl", () => {
 		it("should return error for invalid URL format", () => {
 			const result = convertToJdbcUrl("not-a-url")
 			expect(result.isErr()).toBe(true)
-			expect(result._unsafeUnwrapErr()).toContain("Failed to parse URL")
+			expect(result._unsafeUnwrapErr()).toContain("Invalid URL")
 		})
 	})
 })
