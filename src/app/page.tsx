@@ -26,6 +26,9 @@ export default function Page() {
 				"space-y-4"
 			)}
 		>
+			<p className={cn("text-xs", "text-muted-foreground")}>
+				Everything is done client-side. No data is sent anywhere.
+			</p>
 			<div className={cn("space-y-2")}>
 				<Label>PostgreSQL Connection String</Label>
 				<div className={cn("flex", "flex-row", "gap-4")}>
