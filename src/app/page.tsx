@@ -29,7 +29,11 @@ export default function Page() {
 			<div className={cn("space-y-2")}>
 				<Label>PostgreSQL Connection String</Label>
 				<div className={cn("flex", "flex-row", "gap-4")}>
-					<Input value={url} onChange={(e) => setUrl(e.target.value)} />
+					<Input
+						value={url}
+						onChange={(e) => setUrl(e.target.value)}
+						onFocus={(e) => e.target.select()}
+					/>
 					<Button
 						variant={"outline"}
 						size={"icon"}
