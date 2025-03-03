@@ -24,7 +24,10 @@ export const Footer = () => {
 						variant={"link"}
 						className={cn("text-xs", "text-muted-foreground", "p-0")}
 					>
-						<Link href={"https://github.com/eyenalxai/psql-to-jdbc"}>
+						<Link
+							target="_blank"
+							href={"https://github.com/eyenalxai/psql-to-jdbc"}
+						>
 							https://github.com/eyenalxai/psql-to-jdbc
 						</Link>
 					</Button>
