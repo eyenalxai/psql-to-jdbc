@@ -5,12 +5,12 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { convertToJdbcUrl } from "@/lib/convert"
 import { cn } from "@/lib/utils"
-import { X } from "lucide-react"
+import { Copy, X } from "lucide-react"
 import { useState } from "react"
 
 export default function Page() {
 	const [url, setUrl] = useState(
-		"postgresql://postgres:GXthLZVjArmUkEsdLzCpYlSoQUCCetEs@shinkansen.proxy.rlwy.net:33234/railway"
+		"postgresql://user:password@host:5432/database"
 	)
 
 	const result = convertToJdbcUrl(url)
@@ -26,20 +26,46 @@ export default function Page() {
 				"space-y-4"
 			)}
 		>
-			<div className={cn("space-y-1")}>
+			<div className={cn("space-y-2")}>
 				<Label>PostgreSQL Connection String</Label>
 				<div className={cn("flex", "flex-row", "gap-4")}>
 					<Input value={url} onChange={(e) => setUrl(e.target.value)} />
-					<Button variant={"outline"} size={"icon"} onClick={() => setUrl("")}>
+					<Button
+						variant={"outline"}
+						size={"icon"}
+						onClick={() => setUrl("")}
+						className={cn("cursor-pointer")}
+					>
 						<X />
 					</Button>
 				</div>
 			</div>
-			{url.length > 0 && (
-				<p className={cn("text-sm")}>
-					{result.isOk() ? result.value : result.error}
+			<div
+				className={cn(
+					"flex",
+					"flex-row",
+					"gap-4",
+					"items-start",
+					"justify-between"
+				)}
+			>
+				<p className={cn("text-xs", "break-all")}>
+					{url.length > 0 ? (result.isOk() ? result.value : result.error) : ""}
 				</p>
-			)}
+				<Button
+					disabled={!result.isOk()}
+					variant={"outline"}
+					size={"icon"}
+					onClick={() => {
+						if (result.isOk()) {
+							navigator.clipboard.writeText(result.value)
+						}
+					}}
+					className={cn("cursor-pointer")}
+				>
+					<Copy />
+				</Button>
+			</div>
 		</main>
 	)
 }
