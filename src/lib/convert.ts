@@ -13,13 +13,12 @@ export const convertToJdbcUrl = (url: string): Result<string, string> => {
 		} catch (error) {
 			if (error instanceof TypeError && error.message.includes("Invalid URL")) {
 				const hasNoHost = url.includes("@/")
+
 				if (hasNoHost) {
 					return err("Hostname is required")
 				}
 			}
-			return err(
-				`Failed to parse URL: ${error instanceof Error ? error.message : "Unknown error"}`
-			)
+			return err(error instanceof Error ? error.message : "Unknown error")
 		}
 
 		if (parsedUrl.protocol !== "postgresql:") {
@@ -39,14 +38,13 @@ export const convertToJdbcUrl = (url: string): Result<string, string> => {
 		if (!username) return err("Username is required")
 
 		let jdbcUrl = `jdbc:postgresql://${hostname}:${port}/${database}?user=${encodeURIComponent(username)}`
+
 		if (password) {
 			jdbcUrl += `&password=${encodeURIComponent(password)}`
 		}
 
 		return ok(jdbcUrl)
 	} catch (error) {
-		return err(
-			`Failed to parse URL: ${error instanceof Error ? error.message : "Unknown error"}`
-		)
+		return err(error instanceof Error ? error.message : "Unknown error")
 	}
 }
