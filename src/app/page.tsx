@@ -6,8 +6,6 @@ import { Label } from "@/components/ui/label"
 import { convertToJdbcUrl } from "@/lib/convert"
 import { cn } from "@/lib/utils"
 import { Copy, X } from "lucide-react"
-import Link from "next/link"
-
 import { useState } from "react"
 
 export default function Page() {
@@ -28,31 +26,6 @@ export default function Page() {
 				"space-y-4"
 			)}
 		>
-			<div className={cn("flex", "flex-col", "items-start")}>
-				<p className={cn("text-xs", "text-muted-foreground")}>
-					Everything is done client-side. No data is sent anywhere.
-				</p>
-				<div
-					className={cn(
-						"flex",
-						"flex-row",
-						"gap-2",
-						"items-center",
-						"flex-wrap"
-					)}
-				>
-					<p className={cn("text-xs", "text-muted-foreground")}>Source:</p>
-					<Button
-						asChild
-						variant={"link"}
-						className={cn("text-xs", "text-muted-foreground", "p-0")}
-					>
-						<Link href={"https://github.com/eyenalxai/psql-to-jdbc"}>
-							https://github.com/eyenalxai/psql-to-jdbc
-						</Link>
-					</Button>
-				</div>
-			</div>
 			<div className={cn("space-y-2")}>
 				<Label>PostgreSQL Connection String</Label>
 				<div className={cn("flex", "flex-row", "gap-4")}>

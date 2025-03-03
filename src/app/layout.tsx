@@ -1,3 +1,4 @@
+import { Footer } from "@/components/footer"
 import "./globals.css"
 import { Providers } from "@/components/providers"
 import { cn } from "@/lib/utils"
@@ -35,6 +36,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
 			<body className={cn("font-mono", "antialiased", GeistMono.className)}>
 				<Providers attribute="class" defaultTheme="system" enableSystem>
 					{children}
+					<Footer />
 				</Providers>
 			</body>
 		</html>
