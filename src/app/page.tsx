@@ -28,7 +28,7 @@ export default function Page() {
 				"space-y-4"
 			)}
 		>
-			<div className={cn("flex", "flex-row", "gap-2", "items-center")}>
+			<div className={cn("flex", "flex-col", "items-start")}>
 				<p className={cn("text-xs", "text-muted-foreground")}>
 					Everything is done client-side. No data is sent anywhere.
 				</p>
