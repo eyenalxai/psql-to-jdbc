@@ -57,7 +57,7 @@ export default function Page() {
 
 	return (
 		<main className="container mx-auto p-2 relative">
-			<div className="w-full max-w-2xl space-y-8">
+			<div className="w-full max-w-4xl space-y-8">
 				<div className="space-y-4">
 					<div className="space-y-2">
 						<div className="flex items-center justify-between">
