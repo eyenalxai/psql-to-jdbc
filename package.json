@@ -6,6 +6,7 @@
 		"dev": "next dev --turbo",
 		"build": "next build",
 		"start": "next start",
+		"test": "vitest run",
 		"tsc": "tsc --noEmit",
 		"format": "biome format --write .",
 		"lint": "oxlint --type-aware --fix",
