@@ -57,11 +57,11 @@ export default function Page() {
 
 	return (
 		<main className="container mx-auto p-2 relative">
-			<div className="w-full max-w-4xl space-y-8">
-				<div className="space-y-4">
+			<div className="w-full max-w-4xl">
+				<div className="space-y-2">
 					<div className="space-y-2">
 						<div className="flex items-center justify-between">
-							<label htmlFor="input" className="text-sm font-medium">
+							<label htmlFor="input" className="text-sm">
 								PostgreSQL URL
 							</label>
 							<Button
@@ -80,12 +80,10 @@ export default function Page() {
 							value={input}
 							onChange={(e) => handleConvert(e.target.value)}
 						/>
-						{error && <p className="text-destructive text-sm">{error}</p>}
 					</div>
-
+					{error && <p className="text-destructive text-xs">{error}</p>}
 					{output && (
 						<div className="flex items-center gap-2">
-							<code className="flex-1 text-xs break-all">{output}</code>
 							<Button
 								onClick={() => handleCopy()}
 								size="icon"
@@ -93,6 +91,7 @@ export default function Page() {
 							>
 								<Copy />
 							</Button>
+							<code className="flex-1 text-xs break-all">{output}</code>
 						</div>
 					)}
 				</div>
