@@ -58,7 +58,9 @@ export const convertToJdbcUrl = (url: string): Result<string, string> => {
 	}
 
 	try {
-		return parseUrl(url).andThen(validateAndExtractComponents).map(buildJdbcUrl)
+		return parseUrl(url)
+			.andThen(validateAndExtractComponents)
+			.map((c) => buildJdbcUrl(c))
 	} catch (error) {
 		return err(error instanceof Error ? error.message : "Unknown error")
 	}
