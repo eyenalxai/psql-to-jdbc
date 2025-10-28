@@ -1,20 +1,28 @@
 import { err, fromThrowable, ok } from "neverthrow"
 
-const parseUrl = fromThrowable(
-	(input: string) => {
-		const parsed = new URL(input)
-		if (parsed.protocol !== "postgresql:") {
-			throw new Error("Invalid protocol: URL must start with postgresql://")
-		}
-		return parsed
-	},
-	(error) => {
-		if (error instanceof TypeError && error.message.includes("Invalid URL")) {
-			return "Invalid URL format"
-		}
-		return error instanceof Error ? error.message : "Unknown error"
+const parseUrl = (input: string) => {
+	if (input.includes("@/")) {
+		return err("Hostname is required")
 	}
-)
+
+	const parseUrlThrowable = fromThrowable(
+		(url: string) => {
+			const parsed = new URL(url)
+			if (parsed.protocol !== "postgresql:") {
+				throw new Error("Invalid protocol: URL must start with postgresql://")
+			}
+			return parsed
+		},
+		(error) => {
+			if (error instanceof TypeError && error.message.includes("Invalid URL")) {
+				return "Invalid URL format"
+			}
+			return error instanceof Error ? error.message : "Unknown error"
+		}
+	)
+
+	return parseUrlThrowable(input)
+}
 
 const validateAndExtractComponents = (parsed: URL) => {
 	const hostname = parsed.hostname
