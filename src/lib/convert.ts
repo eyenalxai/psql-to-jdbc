@@ -6,6 +6,7 @@ type PostgresComponents = {
 	database: string
 	username: string
 	password: string | null
+	queryParams: URLSearchParams
 }
 
 const DEFAULT_PORT = "5432"
@@ -67,6 +68,7 @@ const extractComponents = (url: URL): Result<PostgresComponents, ErrorCode> => {
 	const database = url.pathname.slice(1)
 	const username = url.username ? decodeURIComponent(url.username) : ""
 	const password = url.password ? decodeURIComponent(url.password) : null
+	const queryParams = url.searchParams
 
 	if (!hostname) {
 		return err(ERROR_CODES.MISSING_HOSTNAME)
@@ -80,14 +82,24 @@ const extractComponents = (url: URL): Result<PostgresComponents, ErrorCode> => {
 		return err(ERROR_CODES.MISSING_USERNAME)
 	}
 
-	return ok({ hostname, port, database, username, password })
+	return ok({ hostname, port, database, username, password, queryParams })
 }
 
 const buildJdbcUrl = (components: PostgresComponents): string => {
-	const { hostname, port, database, username, password } = components
-	const base = `jdbc:postgresql://${hostname}:${port}/${database}?user=${encodeURIComponent(username)}`
+	const { hostname, port, database, username, password, queryParams } =
+		components
+	const params: string[] = []
 
-	return password ? `${base}&password=${encodeURIComponent(password)}` : base
+	params.push(`user=${encodeURIComponent(username)}`)
+	if (password) {
+		params.push(`password=${encodeURIComponent(password)}`)
+	}
+
+	for (const [key, value] of queryParams) {
+		params.push(`${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
+	}
+
+	return `jdbc:postgresql://${hostname}:${port}/${database}?${params.join("&")}`
 }
 
 export const convertToJdbcUrl = (input: string): Result<string, ErrorCode> => {

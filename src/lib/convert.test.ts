@@ -70,7 +70,7 @@ describe("convertToJdbcUrl", () => {
 		)
 	})
 
-	it("should ignore query parameters in PostgreSQL URL", () => {
+	it("should preserve query parameters in PostgreSQL URL", () => {
 		const result = convertToJdbcUrl(
 			"postgresql://user:pass@localhost:5432/mydb?sslmode=require&connect_timeout=10"
 		).match(
@@ -78,7 +78,7 @@ describe("convertToJdbcUrl", () => {
 			(error) => error
 		)
 		expect(result).toBe(
-			"jdbc:postgresql://localhost:5432/mydb?user=user&password=pass"
+			"jdbc:postgresql://localhost:5432/mydb?user=user&password=pass&sslmode=require&connect_timeout=10"
 		)
 	})
 

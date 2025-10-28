@@ -58,7 +58,7 @@ export default function Page() {
 						</label>
 						<Input
 							id="input"
-							placeholder="postgresql://user:password@localhost:5432/database"
+							placeholder="postgresql://user:password@localhost:5432/database?sslmode=require"
 							value={input}
 							onChange={(e) => handleConvert(e.target.value)}
 						/>
