@@ -14,8 +14,10 @@ const parsePostgresUrl = fromThrowable(
 	(input: string): URL => {
 		const url = new URL(input)
 
-		if (url.protocol !== "postgresql:") {
-			throw new Error("Invalid protocol: URL must start with postgresql://")
+		if (url.protocol !== "postgresql:" && url.protocol !== "postgres:") {
+			throw new Error(
+				"Invalid protocol: URL must start with either postgresql:// or postgres://"
+			)
 		}
 
 		return url
@@ -39,7 +41,7 @@ const extractComponents = (url: URL): Result<PostgresComponents, string> => {
 		return err("Hostname is required")
 	}
 
-	if (!database) {
+	if (!database || database.endsWith("/") || database.includes("/")) {
 		return err("Database name is required")
 	}
 
@@ -62,11 +64,13 @@ export const convertToJdbcUrl = (input: string): Result<string, string> => {
 		return err("URL must be a non-empty string")
 	}
 
-	if (input.includes("@/")) {
+	const trimmedInput = input.trim()
+
+	if (trimmedInput.includes("@/")) {
 		return err("Hostname is required")
 	}
 
-	return parsePostgresUrl(input)
+	return parsePostgresUrl(trimmedInput)
 		.andThen(extractComponents)
 		.map((components) => buildJdbcUrl(components))
 }

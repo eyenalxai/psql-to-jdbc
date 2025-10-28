@@ -48,6 +48,100 @@ describe("convertToJdbcUrl", () => {
 		)
 	})
 
+	it("should handle empty password (colon present but no password)", () => {
+		const result = convertToJdbcUrl(
+			"postgresql://user:@localhost:5432/mydb"
+		).match(
+			(value) => value,
+			(error) => error
+		)
+		expect(result).toBe("jdbc:postgresql://localhost:5432/mydb?user=user")
+	})
+
+	it("should handle IPv6 addresses", () => {
+		const result = convertToJdbcUrl(
+			"postgresql://user:pass@[::1]:5432/mydb"
+		).match(
+			(value) => value,
+			(error) => error
+		)
+		expect(result).toBe(
+			"jdbc:postgresql://[::1]:5432/mydb?user=user&password=pass"
+		)
+	})
+
+	it("should ignore query parameters in PostgreSQL URL", () => {
+		const result = convertToJdbcUrl(
+			"postgresql://user:pass@localhost:5432/mydb?sslmode=require&connect_timeout=10"
+		).match(
+			(value) => value,
+			(error) => error
+		)
+		expect(result).toBe(
+			"jdbc:postgresql://localhost:5432/mydb?user=user&password=pass"
+		)
+	})
+
+	it("should handle special characters in database name", () => {
+		const result = convertToJdbcUrl(
+			"postgresql://user:pass@localhost:5432/my-db_123"
+		).match(
+			(value) => value,
+			(error) => error
+		)
+		expect(result).toBe(
+			"jdbc:postgresql://localhost:5432/my-db_123?user=user&password=pass"
+		)
+	})
+
+	it("should handle database name with URL-unsafe characters", () => {
+		const result = convertToJdbcUrl(
+			"postgresql://user:pass@localhost:5432/my%20database"
+		).match(
+			(value) => value,
+			(error) => error
+		)
+		expect(result).toBe(
+			"jdbc:postgresql://localhost:5432/my%20database?user=user&password=pass"
+		)
+	})
+
+	it("should handle complex special characters in credentials", () => {
+		const result = convertToJdbcUrl(
+			"postgresql://user%3Dname:p%26ss%3Dw%40rd@localhost:5432/mydb"
+		).match(
+			(value) => value,
+			(error) => error
+		)
+		expect(result).toBe(
+			"jdbc:postgresql://localhost:5432/mydb?user=user%3Dname&password=p%26ss%3Dw%40rd"
+		)
+	})
+
+	it("should accept postgres:// as alternative protocol", () => {
+		const result = convertToJdbcUrl(
+			"postgres://user:pass@localhost:5432/mydb"
+		).match(
+			(value) => value,
+			(error) => error
+		)
+		expect(result).toBe(
+			"jdbc:postgresql://localhost:5432/mydb?user=user&password=pass"
+		)
+	})
+
+	it("should trim leading and trailing whitespace", () => {
+		const result = convertToJdbcUrl(
+			"  postgresql://user:pass@localhost:5432/mydb  "
+		).match(
+			(value) => value,
+			(error) => error
+		)
+		expect(result).toBe(
+			"jdbc:postgresql://localhost:5432/mydb?user=user&password=pass"
+		)
+	})
+
 	describe("error cases", () => {
 		it("should return error for empty URL", () => {
 			const error = convertToJdbcUrl("").match(
@@ -64,7 +158,9 @@ describe("convertToJdbcUrl", () => {
 				(value) => value,
 				(error) => error
 			)
-			expect(error).toBe("Invalid protocol: URL must start with postgresql://")
+			expect(error).toBe(
+				"Invalid protocol: URL must start with either postgresql:// or postgres://"
+			)
 		})
 
 		it("should return error for missing hostname", () => {
@@ -101,6 +197,26 @@ describe("convertToJdbcUrl", () => {
 				(error) => error
 			)
 			expect(error).toContain("Invalid URL")
+		})
+
+		it("should return error for database name with trailing slash", () => {
+			const error = convertToJdbcUrl(
+				"postgresql://user:pass@localhost:5432/mydb/"
+			).match(
+				(value) => value,
+				(error) => error
+			)
+			expect(error).toBe("Database name is required")
+		})
+
+		it("should return error for database name with path segments", () => {
+			const error = convertToJdbcUrl(
+				"postgresql://user:pass@localhost:5432/mydb/extra"
+			).match(
+				(value) => value,
+				(error) => error
+			)
+			expect(error).toBe("Database name is required")
 		})
 	})
 })
