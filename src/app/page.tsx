@@ -70,7 +70,6 @@ export default function Page() {
 								variant="ghost"
 								className="h-6 text-xs"
 							>
-								<Copy className="h-3 w-3 mr-1" />
 								Use example
 							</Button>
 						</div>
