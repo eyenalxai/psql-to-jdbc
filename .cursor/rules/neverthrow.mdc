@@ -1,0 +1,473 @@
+---
+description: Guidelines for using neverthrow library for error handling
+---
+
+# Neverthrow Usage Guidelines
+
+## Core Principles
+
+- **Never use try/catch**: Use neverthrow's `ResultAsync.fromPromise()` or `ResultAsync.fromThrowable()` instead
+- **Chain operations**: Use method chaining (`.andThen()`, `.map()`, `.andTee()`, `.mapErr()`, `.match()`, `.orElse()`)
+- **No type casting or `any`**: Let TypeScript infer types from neverthrow chains
+- **Terminate chains explicitly**: Use `.match()` or `.unwrapOr()` to extract final values
+- **Async without await is acceptable**: When using type-aware linting (typescript-eslint/require-await), async functions that return promises without await are valid and should be kept as async for type correctness
+
+## Method Selection
+
+### Use `andTee()` for Side Effects
+
+When you need to perform side effects (logging, state updates) without transforming the result:
+
+```typescript
+// ✅ Good: Use andTee for side effects
+updateDay(db, dayId, { dayOff: false }).andTee(() => {
+  session.isDayOff = false;
+});
+
+// ❌ Bad: Don't use map with return statement for side effects
+updateDay(db, dayId, { dayOff: false }).map(() => {
+  session.isDayOff = false;
+  return undefined;
+});
+```
+
+### Use `map()` for Transformations
+
+When transforming the success value:
+
+```typescript
+// ✅ Good: Transform data
+getUserById(db, id).map((user) => user.name);
+
+// ✅ Good: Transform structure
+ResultAsync.combine([oofUpload, boofUpload]).map(([oofResult, boofResult]) => ({
+  oofResult,
+  boofResult,
+}));
+```
+
+### Use `andThen()` for Async Operations
+
+When chaining operations that return another `Result` or `ResultAsync`:
+
+```typescript
+// ✅ Good: Chain async operations
+getOrCreateUserGroupWeek(db, data)
+  .andThen((ugw) =>
+    getOrCreateDay(db, { ugwId: ugw.id, dateTs, dayOff: false })
+  )
+  .andThen((day) => getTimeSlotsByDay(db, day.id));
+
+// ✅ Good: Async function without await when returning ResultAsync directly
+// (Type-aware linting allows this for type correctness)
+ResultAsync.fromPromise(
+  ctx.db.transaction(async (tx) => upsertUser(tx, userData)),
+  (error) => error
+).andThen((userResult) => userResult);
+```
+
+### Use `mapErr()` for Error Handling
+
+When handling or transforming errors:
+
+```typescript
+// ✅ Good: Handle errors
+fetchData().mapErr((error) => {
+  console.error("Error:", error);
+  return error;
+});
+```
+
+### Use `match()` to Unwrap and Handle Both Cases
+
+When you need to extract the final value and handle both success and error cases:
+
+```typescript
+// ✅ Good: Handle both cases and get a concrete value
+const message = await validateUser(user)
+  .andThen(insertUser)
+  .match(
+    (user) => `User ${user.name} created successfully`,
+    (error) => `Failed to create user: ${error.message}`
+  );
+// message is a string, not a Result
+
+// ✅ Good: For side effects only
+await operation.match(
+  (value) => console.log("Success:", value),
+  (error) => console.error("Error:", error)
+);
+```
+
+### Use `unwrapOr()` for Default Values
+
+When you only care about the success case and want a default for errors:
+
+```typescript
+// ✅ Good: Provide default value
+const userName = await getUser(db, id)
+  .map((user) => user.name)
+  .unwrapOr("Anonymous");
+// userName is a string, not a Result
+
+// ✅ Good: Chain with transformations
+const count = await getItems(db)
+  .map((items) => items.length)
+  .unwrapOr(0);
+```
+
+### Use `orElse()` for Error Recovery
+
+When you want to recover from errors and try alternative approaches:
+
+```typescript
+// ✅ Good: Fallback to cache on database error
+const user = await getUserFromDb(db, id).orElse(
+  (dbError) =>
+    dbError === DatabaseError.NotFound
+      ? getUserFromCache(id) // try alternative source
+      : errAsync(dbError) // propagate other errors
+);
+
+// ✅ Good: Provide default data on error
+const data = await fetchRemoteData(url).orElse(() => okAsync(defaultData));
+```
+
+### Use `andThrough()` When Side Effects Can Fail
+
+When side effects return Results and their errors matter:
+
+```typescript
+// ✅ Good: Validation that can fail
+parseUserInput(userInput)
+  .andThrough(validateUser) // validation errors will be propagated
+  .andThen(insertUser);
+
+// vs andTee: Use when side effect errors should be ignored
+parseUserInput(userInput)
+  .andTee(logUser) // logging errors are ignored
+  .andThen(insertUser);
+```
+
+### Use `orTee()` for Error Logging
+
+When you want to log errors without affecting the error propagation:
+
+```typescript
+// ✅ Good: Log errors without changing the result
+insertUser(user)
+  .orTee((error) => {
+    logger.error("Insert failed:", error);
+  })
+  .andThen(sendNotification);
+// logging errors don't show up in the Result type
+```
+
+## Creating ResultAsync
+
+### Use `ResultAsync.fromPromise()` for Promises That May Throw
+
+The standard way to wrap promises:
+
+```typescript
+// ✅ Good: Wrap promise with error handler
+const user = ResultAsync.fromPromise(
+  db.users.findOne({ id }),
+  (error) => new DatabaseError(error)
+);
+
+// ✅ Good: With inline async operations
+const result = ResultAsync.fromPromise(
+  fetch(url).then((res) => res.json()),
+  (error) => new NetworkError(error)
+);
+```
+
+### Use `ResultAsync.fromThrowable()` for Functions Returning Promises
+
+Safer than `fromPromise` when wrapping function calls (handles sync throws too):
+
+```typescript
+// ✅ Good: Wrap function that returns promise
+const insertUser = ResultAsync.fromThrowable(
+  db.insert,
+  (error) => new DatabaseError(error)
+);
+// Now call it safely
+const result = insertUser(userData);
+
+// ❌ Bad: Using fromPromise with function call (misses sync throws)
+const result = ResultAsync.fromPromise(
+  mayThrowSync(data), // if mayThrowSync throws before returning promise, this crashes
+  errorHandler
+);
+
+// ✅ Good: Use fromThrowable for safer wrapping
+const safeFunc = ResultAsync.fromThrowable(mayThrowSync, errorHandler);
+const result = safeFunc(data);
+```
+
+### Use `ResultAsync.fromSafePromise()` for Promises That Never Throw
+
+When you know a promise won't reject (avoids redundant error handler):
+
+```typescript
+// ✅ Good: Promise that never throws
+const delayed = ResultAsync.fromSafePromise(
+  new Promise((resolve) => setTimeout(() => resolve(value), 1000))
+);
+
+// ✅ Good: Chaining safe operations
+const result = getUserFromMemory(id) // never throws
+  .map(validateUser)
+  .andThen((user) =>
+    ResultAsync.fromSafePromise(
+      Promise.resolve(user) // safe promise
+    )
+  );
+```
+
+### Use `okAsync()` and `errAsync()` for Immediate Values
+
+When you need to create a ResultAsync from a known value:
+
+```typescript
+// ✅ Good: Create successful ResultAsync
+if (cachedValue) {
+  return okAsync(cachedValue);
+}
+return fetchFromDb(id);
+
+// ✅ Good: Early return with error
+if (!isValid(input)) {
+  return errAsync(new ValidationError("Invalid input"));
+}
+return processInput(input);
+```
+
+## Common Patterns
+
+### Avoid Empty Results
+
+Never return empty `ok()`, `okAsync()`, `err()`, or `errAsync()` - it indicates poor chain structure.
+
+```typescript
+// ❌ Bad: Creating empty results
+if (alreadyExists) {
+  session.selectedHours.add(hour)
+  return okAsync()
+}
+
+// ❌ Bad: Empty result in ternary
+const operation = needsUpdate
+  ? updateRecord(db, id).andTee(() => { session.updated = true })
+  : okAsync()
+
+// ✅ Good: Use andTee for side effects and continue the chain
+const operation = updateRecord(db, id)
+  .andTee(() => {
+    if (needsUpdate) {
+      session.updated = true
+    }
+  })
+
+// ✅ Good: Restructure logic to avoid empty returns
+if (alreadyExists) {
+  session.selectedHours.add(hour)
+  // Continue with next operation that returns ResultAsync
+}
+return bulkCreateTimeSlots(db, [...])
+  .andTee(() => { session.selectedHours.add(hour) })
+```
+
+### Combining Results
+
+Use `combine()` when you want to fail fast (stop on first error), or `combineWithAllErrors()` when all operations should run regardless of individual failures:
+
+```typescript
+// ✅ Good: Fail fast - stop on first error
+ResultAsync.combine([operation1, operation2, operation3]).andTee(
+  ([result1, result2, result3]) => {
+    logResults(result1, result2, result3);
+  }
+);
+
+// ✅ Good: Run all operations, collect all errors
+const results = items.map((item) =>
+  ResultAsync.fromPromise(sendNotification(item.id), (error) => ({
+    itemId: item.id,
+    error,
+  }))
+);
+
+await ResultAsync.combineWithAllErrors(results).mapErr((failures) => {
+  for (const failure of failures) {
+    console.error(`Failed for item ${failure.itemId}:`, failure.error);
+  }
+  return failures;
+});
+
+// ❌ Bad: Using orElse to swallow errors creates empty results
+const results = items.map(
+  (item) =>
+    ResultAsync.fromPromise(sendNotification(item.id), (error) => error)
+      .mapErr((error) => {
+        console.error("Error:", error);
+        return error;
+      })
+      .orElse(() => okAsync(undefined)) // DON'T DO THIS
+);
+await ResultAsync.combine(results);
+```
+
+### Error Propagation
+
+```typescript
+// ✅ Good: Let errors propagate through the chain
+return getUser(db, userUuid)
+  .andThen((user) => getProjects(db, user.id))
+  .andThen((projects) => processProjects(projects))
+  .mapErr((error) => {
+    // Only handle at the top level
+    console.error("Operation failed:", error);
+    return error;
+  });
+```
+
+## Anti-Patterns to Avoid
+
+```typescript
+// ❌ Don't return empty results (except okAsync/errAsync for early returns)
+.andThen(() => okAsync()) // empty transformation
+return okAsync() // at end of chain
+const noOp = okAsync() // pointless variable
+
+// ❌ Don't use map for side effects with return
+.map(() => {
+  doSideEffect()
+  return undefined
+})
+
+// ❌ Don't nest promises inside ResultAsync
+ResultAsync.fromPromise(
+  (async () => {
+    const result = await someAsync()
+    return result
+  })(),
+  errorHandler
+)
+
+// ❌ Don't use orElse to swallow errors
+operation
+  .mapErr((error) => {
+    console.error(error)
+    return error
+  })
+  .orElse(() => okAsync(undefined)) // swallows the error!
+
+// ❌ Don't use fromPromise on function calls that might throw sync
+ResultAsync.fromPromise(
+  functionThatMightThrowSync(arg), // may throw before promise
+  errorHandler
+)
+
+// ✅ Use fromThrowable to wrap the function first
+const safeFunc = ResultAsync.fromThrowable(functionThatMightThrowSync, errorHandler);
+const result = safeFunc(arg);
+
+// ❌ Don't manually check and throw result.error
+ResultAsync.fromPromise(
+  ctx.db.transaction(async (tx) => {
+    const userResult = await upsertUser(tx, userData);
+    if (userResult.isErr()) {
+      throw userResult.error; // BAD: might throw non-Error object, violates linter rules
+    }
+    return userResult.value;
+  }),
+  (error) => error
+);
+
+// ✅ Return the ResultAsync directly and use andThen to flatten
+ResultAsync.fromPromise(
+  ctx.db.transaction(async (tx) => upsertUser(tx, userData)),
+  (error) => error
+).andThen((userResult) => userResult);
+
+// ✅ Use andTee for side effects and chain meaningful operations
+someAsyncResult
+  .andTee((result) => { doSideEffect(result) })
+  .andThen((result) => processResult(result))
+```
+
+## Best Practices Summary
+
+### Choosing the Right Terminator
+
+- **Use `match()`** when you need to handle both success and error cases differently
+- **Use `unwrapOr()`** when you only need the success value with a default for errors
+- **Don't leave chains unterminated** - always extract the value at the boundary of your system
+
+```typescript
+// ✅ Good: match when both cases matter
+const statusCode = await operation.match(
+  (data) => 200,
+  (error) => error.code
+);
+
+// ✅ Good: unwrapOr when error case has simple default
+const data = await operation.unwrapOr(defaultData);
+
+// ❌ Bad: Unterminated chain
+const result = operation.map(transform); // still a ResultAsync
+// caller now has to deal with ResultAsync
+```
+
+## Type Annotations
+
+Minimize explicit type annotations; let TypeScript infer from the chain:
+
+```typescript
+// ✅ Good: Let types infer
+const result = getUser(db, id).andThen((user) => getProjects(db, user.id));
+
+// ✅ Good: Chain meaningful operations
+const operation = updateRecord(db, id)
+  .andThen((record) => processRecord(record))
+  .andTee((result) => {
+    if (condition) logResult(result);
+  });
+```
+
+## Quick Reference
+
+### Construction Methods
+
+- `okAsync(value)` - Create successful ResultAsync
+- `errAsync(error)` - Create failed ResultAsync
+- `ResultAsync.fromPromise(promise, errorFn)` - Wrap promise that may throw
+- `ResultAsync.fromThrowable(fn, errorFn)` - Wrap function returning promise (safer)
+- `ResultAsync.fromSafePromise(promise)` - Wrap promise that never throws
+
+### Transformation Methods
+
+- `.map(fn)` - Transform success value
+- `.mapErr(fn)` - Transform error value
+- `.andThen(fn)` - Chain operations that return Result/ResultAsync
+- `.orElse(fn)` - Recover from errors
+
+### Side Effect Methods
+
+- `.andTee(fn)` - Side effect on success (errors ignored)
+- `.orTee(fn)` - Side effect on error (errors ignored)
+- `.andThrough(fn)` - Side effect on success (errors propagated)
+
+### Termination Methods
+
+- `.match(okFn, errFn)` - Handle both cases, extract value
+- `.unwrapOr(default)` - Extract value or use default
+- `await resultAsync` - Get Result, then use `.isOk()`/`.isErr()`
+
+### Combining Methods
+
+- `ResultAsync.combine([...])` - Fail fast on first error
+- `ResultAsync.combineWithAllErrors([...])` - Collect all errors
