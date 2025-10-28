@@ -31,11 +31,8 @@ const validateAndExtractComponents = (parsed: URL) => {
 	const username = decodeURIComponent(parsed.username)
 	const password = parsed.password ? decodeURIComponent(parsed.password) : null
 
-	if (!hostname || hostname === "") {
-		const wasCheckedForHost = parsed.href.includes("@/")
-		return err(
-			wasCheckedForHost ? "Hostname is required" : "Hostname is required"
-		)
+	if (!hostname) {
+		return err("Hostname is required")
 	}
 	if (!database) return err("Database name is required")
 	if (!username) return err("Username is required")
