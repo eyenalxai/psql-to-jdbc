@@ -8,6 +8,9 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { convertToJdbcUrl, getErrorMessage } from "@/lib/convert"
 
+const EXAMPLE_URL =
+	"postgresql://user:password@localhost:5432/database?sslmode=require"
+
 export default function Page() {
 	const [input, setInput] = useState("")
 	const [output, setOutput] = useState("")
@@ -48,17 +51,32 @@ export default function Page() {
 		)
 	}
 
+	const handleUseExample = () => {
+		handleConvert(EXAMPLE_URL)
+	}
+
 	return (
 		<main className="container mx-auto p-8 relative min-h-screen">
 			<div className="w-full max-w-2xl space-y-8">
 				<div className="space-y-4">
 					<div className="space-y-2">
-						<label htmlFor="input" className="text-sm font-medium">
-							PostgreSQL URL
-						</label>
+						<div className="flex items-center justify-between">
+							<label htmlFor="input" className="text-sm font-medium">
+								PostgreSQL URL
+							</label>
+							<Button
+								onClick={handleUseExample}
+								size="sm"
+								variant="ghost"
+								className="h-6 text-xs"
+							>
+								<Copy className="h-3 w-3 mr-1" />
+								Use example
+							</Button>
+						</div>
 						<Input
 							id="input"
-							placeholder="postgresql://user:password@localhost:5432/database?sslmode=require"
+							placeholder={EXAMPLE_URL}
 							value={input}
 							onChange={(e) => handleConvert(e.target.value)}
 						/>
