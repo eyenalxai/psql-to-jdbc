@@ -33,15 +33,12 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
 	return (
-		<html lang="en" suppressHydrationWarning>
-			<body
-				className={cn(
-					"font-sans",
-					"antialiased",
-					GeistSans.variable,
-					GeistMono.variable
-				)}
-			>
+		<html
+			lang="en"
+			suppressHydrationWarning
+			className={cn(GeistSans.variable, GeistMono.variable)}
+		>
+			<body className={cn("antialiased")}>
 				<Providers attribute="class" defaultTheme="system" enableSystem>
 					{children}
 				</Providers>
