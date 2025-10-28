@@ -45,6 +45,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
 						<div className="flex flex-col gap-0.5 md:gap-1">
 							<p className="leading-tight">Client-side only. No data sent.</p>
 							<p className="leading-tight">
+								Verify: DevTools → Network tab shows zero requests.
+							</p>
+							<p className="leading-tight">
 								Source maps included for browser inspection.
 							</p>
 							<a
