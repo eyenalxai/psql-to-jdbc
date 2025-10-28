@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { convertToJdbcUrl } from "@/lib/convert"
+import { convertToJdbcUrl, ERROR_CODES, getErrorMessage } from "@/lib/convert"
 
 describe("convertToJdbcUrl", () => {
 	it("should convert a basic PostgreSQL URL to JDBC format", () => {
@@ -144,79 +144,71 @@ describe("convertToJdbcUrl", () => {
 
 	describe("error cases", () => {
 		it("should return error for empty URL", () => {
-			const error = convertToJdbcUrl("").match(
-				(value) => value,
-				(error) => error
-			)
-			expect(error).toBe("URL must be a non-empty string")
+			convertToJdbcUrl("").mapErr((error) => {
+				expect(error).toBe(ERROR_CODES.INVALID_INPUT)
+				expect(getErrorMessage(error)).toBe("URL must be a non-empty string")
+			})
 		})
 
 		it("should return error for invalid protocol", () => {
-			const error = convertToJdbcUrl(
-				"mysql://user:pass@localhost:5432/mydb"
-			).match(
-				(value) => value,
-				(error) => error
-			)
-			expect(error).toBe(
-				"Invalid protocol: URL must start with either postgresql:// or postgres://"
+			convertToJdbcUrl("mysql://user:pass@localhost:5432/mydb").mapErr(
+				(error) => {
+					expect(error).toBe(ERROR_CODES.INVALID_PROTOCOL)
+					expect(getErrorMessage(error)).toBe(
+						"Invalid protocol: URL must start with either postgresql:// or postgres://"
+					)
+				}
 			)
 		})
 
 		it("should return error for missing hostname", () => {
-			const error = convertToJdbcUrl("postgresql://user:pass@/mydb").match(
-				(value) => value,
-				(error) => error
-			)
-			expect(error).toBe("Hostname is required")
+			convertToJdbcUrl("postgresql://user:pass@/mydb").mapErr((error) => {
+				expect(error).toBe(ERROR_CODES.MISSING_HOSTNAME)
+				expect(getErrorMessage(error)).toBe("Hostname is required")
+			})
 		})
 
 		it("should return error for missing database", () => {
-			const error = convertToJdbcUrl(
-				"postgresql://user:pass@localhost:5432"
-			).match(
-				(value) => value,
-				(error) => error
+			convertToJdbcUrl("postgresql://user:pass@localhost:5432").mapErr(
+				(error) => {
+					expect(error).toBe(ERROR_CODES.MISSING_DATABASE)
+					expect(getErrorMessage(error)).toBe("Database name is required")
+				}
 			)
-			expect(error).toBe("Database name is required")
 		})
 
 		it("should return error for missing username", () => {
-			const error = convertToJdbcUrl(
-				"postgresql://:pass@localhost:5432/mydb"
-			).match(
-				(value) => value,
-				(error) => error
+			convertToJdbcUrl("postgresql://:pass@localhost:5432/mydb").mapErr(
+				(error) => {
+					expect(error).toBe(ERROR_CODES.MISSING_USERNAME)
+					expect(getErrorMessage(error)).toBe("Username is required")
+				}
 			)
-			expect(error).toBe("Username is required")
 		})
 
 		it("should return error for invalid URL format", () => {
-			const error = convertToJdbcUrl("not-a-url").match(
-				(value) => value,
-				(error) => error
-			)
-			expect(error).toContain("Invalid URL")
+			convertToJdbcUrl("not-a-url").mapErr((error) => {
+				expect(error).toBe(ERROR_CODES.INVALID_URL_FORMAT)
+				expect(getErrorMessage(error)).toBe("Invalid URL format")
+			})
 		})
 
 		it("should return error for database name with trailing slash", () => {
-			const error = convertToJdbcUrl(
-				"postgresql://user:pass@localhost:5432/mydb/"
-			).match(
-				(value) => value,
-				(error) => error
+			convertToJdbcUrl("postgresql://user:pass@localhost:5432/mydb/").mapErr(
+				(error) => {
+					expect(error).toBe(ERROR_CODES.MISSING_DATABASE)
+					expect(getErrorMessage(error)).toBe("Database name is required")
+				}
 			)
-			expect(error).toBe("Database name is required")
 		})
 
 		it("should return error for database name with path segments", () => {
-			const error = convertToJdbcUrl(
+			convertToJdbcUrl(
 				"postgresql://user:pass@localhost:5432/mydb/extra"
-			).match(
-				(value) => value,
-				(error) => error
-			)
-			expect(error).toBe("Database name is required")
+			).mapErr((error) => {
+				expect(error).toBe(ERROR_CODES.MISSING_DATABASE)
+				expect(getErrorMessage(error)).toBe("Database name is required")
+			})
 		})
 	})
 })

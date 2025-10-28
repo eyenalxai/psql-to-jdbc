@@ -10,27 +10,58 @@ type PostgresComponents = {
 
 const DEFAULT_PORT = "5432"
 
+export const ERROR_CODES = {
+	INVALID_INPUT: "INVALID_INPUT",
+	INVALID_URL_FORMAT: "INVALID_URL_FORMAT",
+	INVALID_PROTOCOL: "INVALID_PROTOCOL",
+	MISSING_HOSTNAME: "MISSING_HOSTNAME",
+	MISSING_DATABASE: "MISSING_DATABASE",
+	MISSING_USERNAME: "MISSING_USERNAME",
+	UNKNOWN_ERROR: "UNKNOWN_ERROR"
+} as const
+
+export type ErrorCode = (typeof ERROR_CODES)[keyof typeof ERROR_CODES]
+
+export const ERROR_MESSAGES: Record<ErrorCode, string> = {
+	[ERROR_CODES.INVALID_INPUT]: "URL must be a non-empty string",
+	[ERROR_CODES.INVALID_URL_FORMAT]: "Invalid URL format",
+	[ERROR_CODES.INVALID_PROTOCOL]:
+		"Invalid protocol: URL must start with either postgresql:// or postgres://",
+	[ERROR_CODES.MISSING_HOSTNAME]: "Hostname is required",
+	[ERROR_CODES.MISSING_DATABASE]: "Database name is required",
+	[ERROR_CODES.MISSING_USERNAME]: "Username is required",
+	[ERROR_CODES.UNKNOWN_ERROR]: "Unknown error"
+}
+
+export const getErrorMessage = (code: ErrorCode): string => {
+	return ERROR_MESSAGES[code]
+}
+
 const parsePostgresUrl = fromThrowable(
 	(input: string): URL => {
 		const url = new URL(input)
 
 		if (url.protocol !== "postgresql:" && url.protocol !== "postgres:") {
-			throw new Error(
-				"Invalid protocol: URL must start with either postgresql:// or postgres://"
-			)
+			throw new Error(ERROR_CODES.INVALID_PROTOCOL)
 		}
 
 		return url
 	},
-	(error): string => {
+	(error): ErrorCode => {
 		if (error instanceof TypeError && error.message.includes("Invalid URL")) {
-			return "Invalid URL format"
+			return ERROR_CODES.INVALID_URL_FORMAT
 		}
-		return error instanceof Error ? error.message : "Unknown error"
+		if (
+			error instanceof Error &&
+			error.message === ERROR_CODES.INVALID_PROTOCOL
+		) {
+			return ERROR_CODES.INVALID_PROTOCOL
+		}
+		return ERROR_CODES.UNKNOWN_ERROR
 	}
 )
 
-const extractComponents = (url: URL): Result<PostgresComponents, string> => {
+const extractComponents = (url: URL): Result<PostgresComponents, ErrorCode> => {
 	const hostname = url.hostname
 	const port = url.port || DEFAULT_PORT
 	const database = url.pathname.slice(1)
@@ -38,15 +69,15 @@ const extractComponents = (url: URL): Result<PostgresComponents, string> => {
 	const password = url.password ? decodeURIComponent(url.password) : null
 
 	if (!hostname) {
-		return err("Hostname is required")
+		return err(ERROR_CODES.MISSING_HOSTNAME)
 	}
 
 	if (!database || database.endsWith("/") || database.includes("/")) {
-		return err("Database name is required")
+		return err(ERROR_CODES.MISSING_DATABASE)
 	}
 
 	if (!username) {
-		return err("Username is required")
+		return err(ERROR_CODES.MISSING_USERNAME)
 	}
 
 	return ok({ hostname, port, database, username, password })
@@ -59,15 +90,15 @@ const buildJdbcUrl = (components: PostgresComponents): string => {
 	return password ? `${base}&password=${encodeURIComponent(password)}` : base
 }
 
-export const convertToJdbcUrl = (input: string): Result<string, string> => {
+export const convertToJdbcUrl = (input: string): Result<string, ErrorCode> => {
 	if (!input || typeof input !== "string") {
-		return err("URL must be a non-empty string")
+		return err(ERROR_CODES.INVALID_INPUT)
 	}
 
 	const trimmedInput = input.trim()
 
 	if (trimmedInput.includes("@/")) {
-		return err("Hostname is required")
+		return err(ERROR_CODES.MISSING_HOSTNAME)
 	}
 
 	return parsePostgresUrl(trimmedInput)
