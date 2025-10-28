@@ -1,5 +1,20 @@
-import type { Result } from "neverthrow"
-import { err, ok } from "neverthrow"
+import { err, fromThrowable, ok } from "neverthrow"
+
+const parseUrl = fromThrowable(
+	(input: string) => {
+		const parsed = new URL(input)
+		if (parsed.protocol !== "postgresql:") {
+			throw new Error("Invalid protocol: URL must start with postgresql://")
+		}
+		return parsed
+	},
+	(error) => {
+		if (error instanceof TypeError && error.message.includes("Invalid URL")) {
+			return "Invalid URL format"
+		}
+		return error instanceof Error ? error.message : "Unknown error"
+	}
+)
 
 const validateAndExtractComponents = (parsed: URL) => {
 	const hostname = parsed.hostname
@@ -8,7 +23,12 @@ const validateAndExtractComponents = (parsed: URL) => {
 	const username = decodeURIComponent(parsed.username)
 	const password = parsed.password ? decodeURIComponent(parsed.password) : null
 
-	if (!hostname || hostname === "") return err("Hostname is required")
+	if (!hostname || hostname === "") {
+		const wasCheckedForHost = parsed.href.includes("@/")
+		return err(
+			wasCheckedForHost ? "Hostname is required" : "Hostname is required"
+		)
+	}
 	if (!database) return err("Database name is required")
 	if (!username) return err("Username is required")
 
@@ -34,34 +54,12 @@ const buildJdbcUrl = ({
 		: baseUrl
 }
 
-export const convertToJdbcUrl = (url: string): Result<string, string> => {
+export const convertToJdbcUrl = (url: string) => {
 	if (!url || typeof url !== "string") {
 		return err("URL must be a non-empty string")
 	}
 
-	const parseUrl = (input: string): Result<URL, string> => {
-		try {
-			const parsed = new URL(input)
-			if (parsed.protocol !== "postgresql:") {
-				return err("Invalid protocol: URL must start with postgresql://")
-			}
-			return ok(parsed)
-		} catch (error) {
-			if (error instanceof TypeError && error.message.includes("Invalid URL")) {
-				const hasNoHost = input.includes("@/")
-				if (hasNoHost) {
-					return err("Hostname is required")
-				}
-			}
-			return err(error instanceof Error ? error.message : "Unknown error")
-		}
-	}
-
-	try {
-		return parseUrl(url)
-			.andThen(validateAndExtractComponents)
-			.map((c) => buildJdbcUrl(c))
-	} catch (error) {
-		return err(error instanceof Error ? error.message : "Unknown error")
-	}
+	return parseUrl(url)
+		.andThen(validateAndExtractComponents)
+		.map((components) => buildJdbcUrl(components))
 }
