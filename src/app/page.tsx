@@ -59,7 +59,7 @@ export default function Page() {
 		<main className="container mx-auto p-2 relative">
 			<div className="w-full max-w-4xl">
 				<div className="space-y-2">
-					<div className="space-y-2">
+					<div className="space-y-1">
 						<div className="flex items-center justify-between">
 							<label htmlFor="input" className="text-sm">
 								PostgreSQL URL
@@ -76,6 +76,7 @@ export default function Page() {
 						</div>
 						<Input
 							id="input"
+							className="font-mono text-xs"
 							placeholder={EXAMPLE_URL}
 							value={input}
 							onChange={(e) => handleConvert(e.target.value)}
