@@ -67,7 +67,7 @@ export default function Page() {
 
 					{output && (
 						<div className="flex items-center gap-2">
-							<code className="flex-1 text-xs">{output}</code>
+							<code className="flex-1 text-xs break-all">{output}</code>
 							<Button
 								onClick={() => handleCopy()}
 								size="icon"
