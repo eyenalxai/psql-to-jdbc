@@ -82,6 +82,9 @@ export default function Page() {
 			<div className="fixed bottom-2 left-2 right-2 md:absolute md:right-auto md:bottom-4 md:left-4 text-[10px] md:text-xs text-muted-foreground font-mono max-w-full">
 				<div className="flex flex-col gap-0.5 md:gap-1">
 					<p className="leading-tight">Client-side only. No data sent.</p>
+					<p className="leading-tight">
+						Source maps included for browser inspection.
+					</p>
 					<a
 						href="https://github.com/eyenalxai/psql-to-jdbc"
 						target="_blank"
@@ -89,7 +92,7 @@ export default function Page() {
 						className="hover:underline leading-tight truncate"
 						title="https://github.com/eyenalxai/psql-to-jdbc"
 					>
-						Source: github.com/eyenalxai/psql-to-jdbc
+						github.com/eyenalxai/psql-to-jdbc
 					</a>
 				</div>
 			</div>
